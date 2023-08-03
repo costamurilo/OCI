@@ -3,7 +3,7 @@
  # Criado por : Murilo Costa
  # Email : murilo.c.costa@oracle.com
  # Data : 17/02/2023 
-
+ # Script usado para criar estrutura de filesystems para instalação do OCI Storage Gateway
 
  # Pre requisitos
  # Criar vg com minimo de 700GB
