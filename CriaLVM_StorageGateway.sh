@@ -32,7 +32,6 @@
 
  clear
 
-
  val_vg(){
 
  	   VALIDA="$(vgs | grep -w ${VGNAME} | wc -l)"
@@ -49,7 +48,6 @@
  	   fi
  }
 
-
  # Execucao do script
  echo ""
  vgs
@@ -59,9 +57,7 @@
  read VGNAME
 
  echo ""
- 
  val_vg
-
  echo ""
 
  # Criacao dos LVs
@@ -76,7 +72,6 @@
        sleep 1
        lvcreate -y -L10G -n lv_sg_${LV} ${VGNAME} > /dev/null 2>&1
        mkfs.xfs /dev/mapper/${VGNAME}-lv_sg_${LV} -f > /dev/null 2>&1
-       
      ;;
 
      cache)
@@ -84,7 +79,6 @@
        sleep 1
        lvcreate -y -L500G -n lv_sg_${LV} ${VGNAME} > /dev/null 2>&1
        mkfs.xfs /dev/mapper/${VGNAME}-lv_sg_${LV} -f > /dev/null 2>&1
-       
      ;;
 
        metadata)
@@ -92,7 +86,6 @@
        sleep 1
        lvcreate -y -L100G -n lv_sg_${LV} ${VGNAME} > /dev/null 2>&1
        mkfs.xfs /dev/mapper/${VGNAME}-lv_sg_${LV} -f > /dev/null 2>&1
-       
      ;;
 
        log)
@@ -100,7 +93,6 @@
        sleep 1
        lvcreate -y -L30G -n lv_sg_${LV} ${VGNAME} > /dev/null 2>&1
        mkfs.xfs /dev/mapper/${VGNAME}-lv_sg_${LV} -f > /dev/null 2>&1
-       
      ;;
 
      *)
@@ -158,7 +150,6 @@
        echo  " - Compondo /etc/fstab  "
        $(echo "/dev/mapper/${VGNAME}-lv_sg_metadata    ${FS}    xfs    defaults 0  0" >> /etc/fstab)
        echo ""
-       
      ;;
 
        /ocisg/log)
@@ -173,7 +164,6 @@
        echo  " - Compondo /etc/fstab  "
        $(echo "/dev/mapper/${VGNAME}-lv_sg_log    ${FS}    xfs    defaults 0  0" >> /etc/fstab)
        echo ""
-       
      ;;
 
      *)
@@ -191,13 +181,3 @@
  echo ""
  echo ""
  echo " Fim! "
-
-
-
- # Executar estes comandos antes de executar o script
- mkdir -p /tmp/sg
- cd /tmp/sg
- echo "/ocisg          ocisg    10 " >> /tmp/sg/lista.lst
- echo "/ocisg/cache    cache    500" >> /tmp/sg/lista.lst
- echo "/ocisg/metadata metadata 100" >> /tmp/sg/lista.lst
- echo "/ocisg/log      log      30 " >> /tmp/sg/lista.lst
