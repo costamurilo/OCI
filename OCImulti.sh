@@ -9,8 +9,8 @@
  # Autor          : Murilo Costa (murilo.c.costa@oracle.com)
  # Funcionalidade : Script para automatizacao de stop, start, restart, etc. de OCI compute instances
  # Argumentos     : start, stop, reset, softreset, softstop, diagnosticreboot [Actions validas]
- # Sintaxe        : ./script --action [Action] --OCID [Compute_OCID]
- #                : ./script --action stop --OCID <OCID>
+ # Sintaxe        : ./script --compute --action [Action] --OCID [Compute_OCID]
+ #                : ./script --compute --action stop --OCID <OCID>
  # Funcionamento  : Basicamente o que o script faz, é ler a variavel $2 da sintaxe do comando e redirecionar como argumento para o comando de start/stop do CLI
  # Dependencias   : OCI CLi precisa estar instalado e configurado no SO onde este script ira rodar, e o usuario associado ao OCI CLi precisa possuir policies de permissionamento de gerencias das compute instances
  #                  Este script foi pensado para ser executado em um sistema operacional linux.
