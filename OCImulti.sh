@@ -3,7 +3,7 @@
  echo ""
 
  # Atualizacao    : 11/08/2023
- # murilo.c.costa@oracle.com
+
  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  #                                                                   --compute
  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -13,9 +13,9 @@
  # Dependencias    : OCI CLi precisa estar instalado e configurado no SO onde este script ira rodar, e o usuario associado ao OCI CLi precisa possuir policies de permissionamento de gerencias das compute instances
  #                  Este script foi pensado para ser executado em um sistema operacional linux.
  #
- # Sintaxe         : OCImulti.sh --action [Action] --OCID [Compute_OCID]
+ # Sintaxe         : OCImulti.sh --compute --action [Action] --OCID [Compute_OCID]
  #
- # Exemplo         : OCImulti.sh --action stop --OCID <OCID>
+ # Exemplo         : OCImulti.sh --compute --action stop --OCID <OCID>
  #
  # Actions validas : start, stop, reset, softreset, softstop, diagnosticreboot
  #
@@ -177,6 +177,16 @@
      split --numeric-suffixes=1 --additional-suffix=.out -l${1} ${2} lista_${OPT}_ 1>/dev/null 2>&1
    }
 
+   fn_createdon()
+   {
+    oci compute instance list -c ${CPTM_ID} 2>/dev/null | jq -r '.data[] | select(."time-created"|contains("'${DATA}'"))'   | jq -r '"VM: " + ."display-name" +" CreatedOn: "+ ."time-created"' | cut -f 1 -d . | sed 's/T/ Hora: /g'
+   }
+
+   fn_list_shapes()
+   {
+    oci compute instance list -c ${CPTM_ID} 2>/dev/null | jq -r '.data[] | select(."shape"|contains("."))' | jq -r '"VM: " + ."display-name" +" Shape: "+ ."shape"'
+   }
+
  ##################################################################################################################################
   if [ -z ${1} ]
    then
@@ -200,6 +210,54 @@
      fn_ger
      echo ""
      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+   ;;
+   --list-shapes)
+     if [ -z ${2} ]
+       then
+         fn_cabec
+         echo " - Para consultar os shapes das computes, digite :"
+         echo "   OCImulti.sh --list-shapes [ --compartment-OCID <Compartment OCID> | -t ] "
+         echo ""
+         echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+     fi
+     case ${2} in
+       --compartment-OCID)
+         CPTM_ID="${3}"
+         OUT="${HOMEDIR}/instance_list.out"
+         fn_cabec
+         echo -e " - Limpando ${OUT} : \c"
+         sleep 2
+         > ${OUT}
+         fn_rc
+         echo -e " - Incrementando ${OUT} com os Shapes de computes : \c"
+         fn_list_shapes >> ${OUT}
+         fn_rc
+         echo ""
+         echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+       ;;
+       -t)
+         CPTM_ID="${3}"
+         OUT="${HOMEDIR}/instance_list.out"
+         fn_cabec
+         echo -e " - Digite o caminho do arquivo contendo a lista de compartments para consultar : \c"
+         read CAM 
+         echo -e " - Limpando ${OUT} : \c"
+         sleep 2
+         > ${OUT}
+         fn_rc
+         echo -e " - Incrementando ${OUT} com os Shapes de computes : \c"
+         for CPTM_ID in $(cat ${CAM} 2>/dev/null)
+         do
+           fn_list_shapes >> ${OUT}
+         done
+         fn_rc
+         echo ""
+         echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+       ;;
+       *)
+         f
+       ;;
+     esac
    ;;
    --list-all-instances)
        N_ARG="${2}"
@@ -278,7 +336,7 @@
              > ${OUT}
              fn_rc
              echo -e " - Incrementando ${OUT} com compute OCIDs : \c"
-             for COMP_ID in $(cat ${ARQUIVO})
+             for COMP_ID in $(cat ${ARQUIVO}2>/dev/null)
              do
                oci compute instance list  --compartment-id ${COMP_ID} --all 2>/dev/null | grep -w '\"id\":' | awk '{print $2}' | cut -f 2 -d \" >> ${OUT}
              done
@@ -312,6 +370,57 @@
 
              fi
          fi
+       ;;
+       --createdon)
+         if [ -z ${3} ]
+           then
+             fn_cabec
+             echo " - Execute a seguinte sintaxe: OCImulti.sh --list-all-instances --created [--compartment-ocid <compartment-OCID> | -t ]"
+             echo ""
+             echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+         fi
+         case ${3} in
+           --compartment-ocid)
+             CPTM_ID="${4}"
+             OUT="${HOMEDIR}/instance_list.out"
+             fn_cabec
+             echo -e " - Especifique a data desejada no formato : AAAA-MM-DD : \c"
+             read DATA
+             echo -e " - Limpando ${OUT} : \c"
+             sleep 2
+             > ${OUT}
+             fn_rc
+             echo -e " - Incrementando ${OUT} com computes criadas em [ ${DATA} ] : \c"
+             fn_createdon >> ${OUT}
+             fn_rc
+           ;;
+           -t)
+             OUT="${HOMEDIR}/instance_list.out"
+             fn_cabec
+             echo -e " - Digite o caminho do arquivo contendo a lista de compartments para consultar : \c"
+             read CAM 
+             echo -e " - Especifique a data desejada no formato : AAAA-MM-DD : \c"
+             read DATA
+             echo -e " - Limpando ${OUT} : \c"
+             sleep 2
+             > ${OUT}
+             fn_rc
+             echo -e " - Incrementando ${OUT} com computes criadas em [ ${DATA} ] : \c"
+             for CPTM_ID in $(cat ${CAM} 2>/dev/NULL)
+             do
+               fn_createdon >> ${OUT}
+               fn_rc
+             done
+           ;;
+           *)
+             fn_cabec
+             echo " - Argumento \"${3}\" invalido."
+             echo "   Caso nao conheca os argumentos, consulte a documentacao do script no corpo do script."
+             echo ""
+             echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+             exit 100
+           ;;
+         esac
        ;;
         #
        *)
@@ -385,7 +494,7 @@
 
          echo -e " - Dividindo lista em arquivos de [${LINES}] linhas : \c"
          fn_split ${LINES} ${DEL_LIST}
-         mv lista_${OPT}*.out ${HOMEDIR}/${OPT}/
+         mv lista_${OPT}*.out ${HOMEDIR}/${OPT}/ 2>/dev/null
          chmod 755 ${HOMEDIR}/${OPT}/lista_${OPT}*.out 2>/dev/null
          fn_rc | tee -a ${HOMEDIR}/aux.out
          TEST="$(cat ${HOMEDIR}/aux.out | cut -f 1 -d \!)"
@@ -415,6 +524,96 @@
    ;;
 
      #
+   --h)
+      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+      echo "                                                                   --compute"
+      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+      echo " Finalidade      : Script multi funções para automatizacao de stop, start, restart, etc. de OCI compute instances, gerar relatórios com OCID de computes, split de listas, "
+      echo "                   e delete de instances."
+      echo "                     "
+      echo " Dependencias    : OCI CLi precisa estar instalado e configurado no SO onde este script ira rodar, e o usuario associado ao OCI CLi precisa possuir policies de permissionamento de gerencias das compute instances"
+      echo "                  Este script foi pensado para ser executado em um sistema operacional linux."
+      echo ""
+      echo " Sintaxe         : OCImulti.sh --compute --action [Action] --OCID [Compute_OCID]"
+      echo ""
+      echo " Exemplo         : OCImulti.sh --compute --action stop --OCID <OCID>"
+      echo ""
+      echo " Actions validas : start, stop, reset, softreset, softstop, diagnosticreboot"
+      echo ""
+      echo " Funcionamento   : Basicamente o que o script faz, é ler a variavel $2 da sintaxe do comando e redirecionar como argumento para o comando de start/stop do CLI"
+      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+      echo "                                                                   --list-all-instances"
+      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+      echo " Finalidade      : Listar os OCIDs de compute instances contidas dentro de um ou mais compartments especificado(s) pelo usuario e compor um arquivo com estas informacoes. "
+      echo "                   Pode tambem redirecionar a saida completa da consulta para o arquivo."
+      echo ""
+      echo " Dependencias    : OCI CLi precisa estar instalado e configurado no SO onde este script ira rodar, e o usuario associado ao OCI CLi precisa possuir policies de permissionamento de gerencias das compute instances"
+      echo "                   Este script foi pensado para ser executado em um sistema operacional linux."
+      echo "                   Este argumento somente pode ser utilizado acompanhado de um ou mais argumentos, conforme segue :"
+      echo ""
+      echo " Argumentos      :"
+      echo "                 --compartment-id"
+      echo "                                   Utilize este argumento para especificar o compartment OCID onde deseja executar a consulta."
+      echo "                                   Este argumento direciona somente o OCID das computes para o arquivo de saida."
+      echo "                       Exemplo:"
+      echo "                                   OCImulti.sh --list-all-instances --compartiment-id <Compartment OCID>"
+      echo "                  -t"
+      echo "                                   Utilize este argumento para informar ao script um arquivo contendo um compartment OCID ou mais. "
+      echo "                                   Este argumento e interativo. Sera necessario informar ao script o caminho e nome do arquivo contendo a lista de compartments OCID."
+      echo "                       Exemplo:"
+      echo "                                   OCImult.sh --list-all-instances -t"
+      echo "                                   "
+      echo ""
+      echo "                 --all"
+      echo "                                    Se utilizado em conjunto com os argumentos "--compartment-id" ou "-t", redireciona a saida completa ( Com todas as informacoes ) da "
+      echo "                                    consulta para o arquivo de saida."
+      echo "                                    Caso seja utilizado com o argumento '-t', a execucao sera interativa, necessitando informar o caminho com a lista de compartment OCID."
+      echo "                       Exemplo:"
+      echo "                                    OCImulti.sh --list-all-instances -all"
+      echo "                                    OCImulti.sh --list-all-instances -t -all"
+      echo "                     "
+      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+      echo "                                                                   --split"
+      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+      echo " Finalidade      : Quebrar um arquivo de saida extenso em varios arquivos menores para facilitar a carga de trabalho."
+      echo "                   Pode ser necessario antes de alguma consulta extensa para diminuir o tempo de resposta das consultas."
+      echo ""
+      echo " Observacoes     : O home do script OCImulti sempre sera o diretorio corrente onde o mesmo esta sendo executado."
+      echo "                   O argumento "--split" e interativo e devera interagir da seguinte maneira :"
+      echo "                     1 - Pedira para informar onde se encontra o arquivo com as informacoes a serem divididas;"
+      echo "                     2 - Informara a criacao do subdiretorio "out" dentro do home ( ou seja, dentro de onde o script esta sendo executado. );"
+      echo "                     3 - Caso o script esteja sendo re-executado e o diretorio "out" ja exista ele pergunta se deve limpar o conteudo;"
+      echo "                         Caso opte por nao limpar o conteudo, o script sera encerrado;"
+      echo "                     4 - Pedira para informar quantas linhas cada arquivo de saida devera ter;"
+      echo "                     5 - Informa a divisao dos arquivos;"
+      echo "                     6 - Informa a conclusao do processo exibindo o local onde os arquivos foram gerados e seus nomes."
+      echo ""
+      echo " Argumentos      : Nao possui argumentos."
+      echo ""
+      echo "                   Os arquivos serao gerados no seguinte formato : lista_out_nº.out."
+      echo "                   Durante a executacao deste processo, o arquivo "aux.out" é gerado como apoio de status de execucao do processo. O mesmo e limpo a cada execucao do script."
+      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+      echo "                                                                   --delete"
+      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+      echo " Finalidade      : Gerar scripts com os comandos para deleção de compute instances, e caso necessario executar os scripts de delecao de compute instances."
+      echo "      "
+      echo " Observacoes     : O argumento "--delete" sempre devera ser utilizado acompanhado de um ou mais argumentos."
+      echo "                   O argumento "--delete" e interativo e devera interagir da seguinte maneira :"
+      echo "                     1 - Informara a criacao do subdiretorio "del" dentro do home ( ou seja, dentro de onde o script esta sendo executado. );"
+      echo "                     2 - Caso o script esteja sendo re-executado e o diretorio "del" ja exista ele pergunta se deve limpar o conteudo;"
+      echo "                         Caso opte por nao limpar o conteudo, o script sera encerrado;"
+      echo "                         Caso opte por limpar, informara a limpeza com sucesso;"
+      echo "                     3 - Pedira o caminho do arquivo contendo a lista de recusros ( OCIDs ) a serem considerados para gerar o script com os comandos de delecao;"
+      echo "                         Caso o arquivo esteja no mesmo diretorio do script, basta digitar o nome do arquivo;"
+      echo "                     4 - Informara o status da geracao da lista completa com os comandos de delecao;"
+      echo "                     5 - O split ( divisao ) dos scripts com comandos de delecao e automatico. O script devera perguntar quantas linhas deseja em cada arquivo;"
+      echo "                     6 - O script devera informar o status da geracao dos scrits informando a quantidade de linhas escolhas no campo "[n°]";"
+      echo "                     7 - O script informa a conclusao do processo exibindo o local e os scripts gerados."
+      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+   ;;
    *)
      fn_cabec
      echo " - Argumento \"${ARG}\" invalido."
