@@ -170,6 +170,11 @@
          fn_rc
      fi
    }
+   
+   fn_list_instances()
+   {
+    oci compute instance list  --compartment-id ${CPTM_ID} --all 2>/dev/null
+   }
 
    # Funcao para split de arquivos
    fn_split()
@@ -296,7 +301,7 @@
              > ${OUT}
              fn_rc
              echo -e " - Incrementando ${OUT} com compute OCIDs : \c"
-             oci compute instance list  --compartment-id ${CPTM_ID} --all 2>/dev/null | grep -w '\"id\":' | awk '{print $2}' | cut -f 2 -d \" >> ${OUT}
+             fn_list_instances | grep -w '\"id\":' | awk '{print $2}' | cut -f 2 -d \" >> ${OUT}
              fn_rc
              echo ""
              echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
@@ -309,7 +314,7 @@
                  > ${OUT}
                  fn_rc
                  echo -e " - Incrementando ${OUT} com compute INFOs : \c"
-                 oci compute instance list  --compartment-id ${CPTM_ID} --all 2>/dev/null >> ${OUT}
+                 fn_list_instances >> ${OUT}
                  fn_rc
                  echo ""
                  echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
@@ -336,7 +341,7 @@
              > ${OUT}
              fn_rc
              echo -e " - Incrementando ${OUT} com compute OCIDs : \c"
-             for COMP_ID in $(cat ${ARQUIVO}2>/dev/null)
+             for COMP_ID in $(cat ${ARQUIVO} 2>/dev/null)
              do
                oci compute instance list  --compartment-id ${COMP_ID} --all 2>/dev/null | grep -w '\"id\":' | awk '{print $2}' | cut -f 2 -d \" >> ${OUT}
              done
