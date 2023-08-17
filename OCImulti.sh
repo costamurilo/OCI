@@ -197,7 +197,7 @@
    then
      fn_cabec
      echo " - Por favor utilize algum argumento."
-     echo "   Caso nao conheca os argumentos, consulte a documentacao do script no corpo do script."
+     echo "   Caso nao conheca os argumentos, consulte a documentacao do script utilizando o argumento --h."
      echo ""
      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
      exit 100
@@ -420,7 +420,7 @@
            *)
              fn_cabec
              echo " - Argumento \"${3}\" invalido."
-             echo "   Caso nao conheca os argumentos, consulte a documentacao do script no corpo do script."
+             echo "   Caso nao conheca os argumentos, consulte a documentacao do script utilizando o argumento --h."
              echo ""
              echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
              exit 100
@@ -431,7 +431,7 @@
        *)
          fn_cabec
          echo " - Argumento \"${N_ARG}\" invalido."
-         echo "   Caso nao conheca os argumentos, consulte a documentacao do script no corpo do script."
+         echo "   Caso nao conheca os argumentos, consulte a documentacao do script utilizando o argumento --h."
          echo ""
          echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
          exit 100
@@ -520,7 +520,7 @@
          fn_cabec
          echo " - Argumento \"${DELARG}\" invalido."
          echo " - Por favor utilize algum argumento valido!"
-         echo "   Caso nao conheca os argumentos, consulte a documentacao do script no corpo do script."
+         echo "   Caso nao conheca os argumentos, consulte a documentacao do script utilizando o argumento --h."
          echo ""
          echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
          exit 100
@@ -623,7 +623,7 @@
      fn_cabec
      echo " - Argumento \"${ARG}\" invalido."
      echo " - Por favor utilize algum argumento valido!"
-     echo "   Caso nao conheca os argumentos, consulte a documentacao do script no corpo do script."
+     echo "   Caso nao conheca os argumentos, consulte a documentacao do script utilizando o argumento --h."
      echo ""
      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
      exit 100
