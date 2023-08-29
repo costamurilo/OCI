@@ -11,10 +11,10 @@
  # Executar estes comandos antes de executar o script
  # mkdir -p /tmp/sg
  # cd /tmp/sg
- # echo "/ocisg          ocisg    10 " >> /tmp/sg/lista.lst
+ # echo "/ocisg          ocisg    1 " >> /tmp/sg/lista.lst
  # echo "/ocisg/cache    cache    500" >> /tmp/sg/lista.lst
- # echo "/ocisg/metadata metadata 100" >> /tmp/sg/lista.lst
- # echo "/ocisg/log      log      30 " >> /tmp/sg/lista.lst
+ # echo "/ocisg/metadata metadata 80" >> /tmp/sg/lista.lst
+ # echo "/ocisg/log      log      20 " >> /tmp/sg/lista.lst
 
  # Instalacao do Storage gateway
  # Filesystem da instacao : /ocisg
