@@ -104,10 +104,13 @@
  HOMEDIR="$(pwd)"
      ARG="${1}"
      LOG="${HOMEDIR}/instances_ger_log_$(date +%d%m%y).out"
+     AUX="${HOMEDIR}/aux.out"
+     OUT="${HOMEDIR}/instance_list.out"
 
 
 
- >${HOMEDIR}/aux.out
+ > ${AUX}
+ > ${OUT}
 
  #Funcoes
 
@@ -122,8 +125,10 @@
      if [ ${?} -eq 0 ]
        then
          echo "Ok!"
+         STT="OK"
        else
          echo "Nok! :\\"
+         STT="NOK"
      fi
    }
 
@@ -189,7 +194,102 @@
 
    fn_list_shapes()
    {
-    oci compute instance list -c ${CPTM_ID} 2>/dev/null | jq -r '.data[] | select(."shape"|contains("."))' | jq -r '"VM: " + ."display-name" +" Shape: "+ ."shape"'
+    oci compute instance list -c ${CPTM_ID} 2>/dev/null | jq -r '.data[] | select(."shape"|contains("."))' | jq -r '"VM: " + ."display-name" +" Shape: "+ ."shape"' >> ${OUT}
+   }
+
+   fn_list_regions()
+   {
+     REGION_AVAIL="$(oci iam region-subscription list 2>/dev/null | jq -r '.data[]."region-name"' | xargs)"
+   }
+
+   fn_instance_list()
+   {
+     oci compute instance list  --compartment-id ${CPTM_ID} --all 2>/dev/null | grep -w '\"id\":' | awk '{print $2}' | cut -f 2 -d \" >> ${OUT}
+   }
+
+   fn_regions()
+   {
+     OUT="${HOMEDIR}/instance_list.out"
+     AUX="${HOMEDIR}/aux.out"
+     #CPTM_ID="${1}"
+     #REGION="$(cat ~/.oci/config | grep region | cut -f 2 -d =)"
+     BKP="${HOMEDIR}/bkp"
+
+     #IMPORTANTE
+     FN_OPT="${1}"
+     
+     fn_list_regions
+
+     #>${OUT}
+     #rm -r ${BKP}/*
+
+     if [ -z ${BKP} ]
+       then
+         echo -e " - Criando diretorio de backup em \"${BKP}\" : \c"
+         mkdir -p ${BKP} 2>/dev/null
+         fn_rc
+       else
+         rm -r ${BKP}/* 2>/dev/null
+     fi
+     
+     if [ -z ${ORIG} ]
+       then
+         echo -e " - Informe o caminho do arquivo de configuracao do OCI CLi. Padrao - [ /root/.oci/config ] : \c"
+         read ORIG
+         export -n ORIG
+     fi
+     
+     echo -e " - Executando backup de \"${ORIG}\": \c"
+     cp -p ${ORIG} ${BKP}/config_orig_$(date +%d%m%Y%H%M) 2>/dev/null
+     fn_rc
+     if [ ${?} -eq 0 ]
+       then
+         ORIGBKP="${BKP}/$(ls -rt ${BKP} | grep -i orig)"
+         echo -e " - Backup criado com sucesso : ${ORIGBKP}"
+         echo ""
+       else
+         echo " - Falha ao criar backup do original. Parando."
+         exit 100
+     fi
+     echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+     echo " - As seguintes regioes serao pesquisadas : ${REGION_AVAIL}"
+     echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+
+     for NEW_REGION in ${REGION_AVAIL}
+     do
+       echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+       >${AUX}
+       echo " - Executando para a regiao : ${NEW_REGION}."
+       echo -e " - Gerando arquivo de config para regiao listada : \c"
+       REGION="$(cat ${ORIGBKP} | grep region | cut -f 2 -d =)"
+       cat ${ORIGBKP} | sed 's/region='${REGION}'/region='${NEW_REGION}'/g' >> ${AUX} #2>/dev/null
+       cp  ${AUX} ${ORIG}
+       fn_rc
+       #echo " - Arquivo gerado :"
+       #echo ""
+       #cat ${ORIG}
+       #echo ""
+       echo -e " - Executando consultas na regiao ${NEW_REGION} : \c"
+       # IMPORTANTE
+       ${FN_OPT}
+       fn_rc
+       #echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+     done
+     echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+     echo ""
+     echo " - Resultados em : ${OUT} "
+     echo ""
+     echo -e " - Restaurando arquivo de configuracao original : \c"
+     cp -p ${ORIGBKP} ${ORIG} 2>/dev/null
+     fn_rc
+     if [ ${STT} == OK ]
+       then
+         echo " - Procedimento finalizado com sucesso!"
+         rm ${BKP}/* 2>/dev/null
+         echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+       else
+         echo " - Falha ao executar processo."
+     fi
    }
 
  ##################################################################################################################################
@@ -197,7 +297,7 @@
    then
      fn_cabec
      echo " - Por favor utilize algum argumento."
-     echo "   Caso nao conheca os argumentos, consulte a documentacao do script utilizando o argumento --h."
+     echo "   Caso nao conheca os argumentos, consulte a documentacao do script no corpo do script."
      echo ""
      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
      exit 100
@@ -227,40 +327,88 @@
      fi
      case ${2} in
        --compartment-OCID)
-         CPTM_ID="${3}"
-         OUT="${HOMEDIR}/instance_list.out"
-         fn_cabec
-         echo -e " - Limpando ${OUT} : \c"
-         sleep 2
-         > ${OUT}
-         fn_rc
-         echo -e " - Incrementando ${OUT} com os Shapes de computes : \c"
-         fn_list_shapes >> ${OUT}
-         fn_rc
-         echo ""
-         echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+         if [ -z ${4} ]
+           then
+             CPTM_ID="${3}"
+             OUT="${HOMEDIR}/instance_list.out"
+             fn_cabec
+             echo -e " - Limpando ${OUT} : \c"
+             sleep 2
+             > ${OUT}
+             fn_rc
+             echo -e " - Incrementando ${OUT} com os Shapes de computes : \c"
+             fn_list_shapes >> ${OUT}
+             fn_rc
+             echo ""
+             echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+           else
+             case ${4} in
+               --all-regions)
+                 CPTM_ID="${3}"
+                 OUT="${HOMEDIR}/instance_list.out"
+                 fn_cabec
+                 echo -e " - Limpando ${OUT} : \c"
+                 #> ${OUT}
+                 fn_rc
+                 fn_regions "fn_list_shapes"
+                 unset ORIG
+               ;;
+
+               *)
+                 fn_cabec
+                 echo " - Argumento [${4}] invalido."
+               ;;
+             esac
+         fi
        ;;
        -t)
-         CPTM_ID="${3}"
-         OUT="${HOMEDIR}/instance_list.out"
-         fn_cabec
-         echo -e " - Digite o caminho do arquivo contendo a lista de compartments para consultar : \c"
-         read CAM 
-         echo -e " - Limpando ${OUT} : \c"
-         sleep 2
-         > ${OUT}
-         fn_rc
-         echo -e " - Incrementando ${OUT} com os Shapes de computes : \c"
-         for CPTM_ID in $(cat ${CAM} 2>/dev/null)
-         do
-           fn_list_shapes >> ${OUT}
-         done
-         fn_rc
-         echo ""
-         echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+         if [ -z ${3} ]
+           then
+             CPTM_ID="${3}"
+             OUT="${HOMEDIR}/instance_list.out" 
+             fn_cabec
+             echo -e " - Digite o caminho do arquivo contendo a lista de compartments para consultar : \c"
+             read CAM 
+             echo -e " - Limpando ${OUT} : \c"
+             sleep 2
+             > ${OUT}
+             fn_rc
+             echo -e " - Incrementando ${OUT} com os Shapes de computes : \c"
+             for CPTM_ID in $(cat ${CAM} 2>/dev/null)
+             do
+               fn_list_shapes >> ${OUT}
+             done
+             fn_rc
+             echo ""
+             echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+           else
+             case ${3} in
+               --all-regions)
+                 #CPTM_ID="${3}"
+                 OUT="${HOMEDIR}/instance_list.out"
+                 fn_cabec
+                 echo -e " - Limpando ${OUT} : \c"
+                 > ${OUT}
+                 fn_rc
+                 echo -e " - Digite o caminho do arquivo contendo a lista de compartments para consultar : \c"
+                 read CAM
+                 for CPTM_ID in $(cat ${CAM} 2>/dev/null)
+                 do
+                   echo " - Executando em Compartiment ID : [ ${CPTM_ID} ]"
+                   fn_regions fn_list_shapes
+                 done
+               ;;
+
+               *)
+                 fn_cabec
+                 echo " - Argumento [${3}] invalido."
+               ;;
+             esac
+         fi
        ;;
        *)
-         f
+         fn_cabec
+         echo " - Argumento invalido."
        ;;
      esac
    ;;
@@ -343,7 +491,7 @@
              echo -e " - Incrementando ${OUT} com compute OCIDs : \c"
              for COMP_ID in $(cat ${ARQUIVO} 2>/dev/null)
              do
-               oci compute instance list  --compartment-id ${COMP_ID} --all 2>/dev/null | grep -w '\"id\":' | awk '{print $2}' | cut -f 2 -d \" >> ${OUT}
+               fn_instance_list
              done
              fn_rc
              echo ""
@@ -420,7 +568,7 @@
            *)
              fn_cabec
              echo " - Argumento \"${3}\" invalido."
-             echo "   Caso nao conheca os argumentos, consulte a documentacao do script utilizando o argumento --h."
+             echo "   Caso nao conheca os argumentos, consulte a documentacao do script no corpo do script."
              echo ""
              echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
              exit 100
@@ -431,7 +579,7 @@
        *)
          fn_cabec
          echo " - Argumento \"${N_ARG}\" invalido."
-         echo "   Caso nao conheca os argumentos, consulte a documentacao do script utilizando o argumento --h."
+         echo "   Caso nao conheca os argumentos, consulte a documentacao do script no corpo do script."
          echo ""
          echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
          exit 100
@@ -450,8 +598,8 @@
      echo -e " - Dividindo lista em arquivos de [${LINES}] linhas : \c"
      fn_split ${LINES} ${LISTA}
      mv lista_${OPT}*.out ${HOMEDIR}/${OPT}/
-     fn_rc | tee -a ${HOMEDIR}/aux.out
-     TEST="$(cat ${HOMEDIR}/aux.out | cut -f 1 -d \!)"
+     fn_rc | tee -a ${AUX}
+     TEST="$(cat ${AUX} | cut -f 1 -d \!)"
      if [ ${TEST} == Nok ]
        then
          echo " - Parando!"
@@ -501,8 +649,8 @@
          fn_split ${LINES} ${DEL_LIST}
          mv lista_${OPT}*.out ${HOMEDIR}/${OPT}/ 2>/dev/null
          chmod 755 ${HOMEDIR}/${OPT}/lista_${OPT}*.out 2>/dev/null
-         fn_rc | tee -a ${HOMEDIR}/aux.out
-         TEST="$(cat ${HOMEDIR}/aux.out | cut -f 1 -d \!)"
+         fn_rc | tee -a ${AUX}
+         TEST="$(cat ${AUX} | cut -f 1 -d \!)"
          if [ ${TEST} == Nok ]
            then
              echo " - Parando!"
@@ -520,7 +668,7 @@
          fn_cabec
          echo " - Argumento \"${DELARG}\" invalido."
          echo " - Por favor utilize algum argumento valido!"
-         echo "   Caso nao conheca os argumentos, consulte a documentacao do script utilizando o argumento --h."
+         echo "   Caso nao conheca os argumentos, consulte a documentacao do script no corpo do script."
          echo ""
          echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
          exit 100
@@ -623,7 +771,7 @@
      fn_cabec
      echo " - Argumento \"${ARG}\" invalido."
      echo " - Por favor utilize algum argumento valido!"
-     echo "   Caso nao conheca os argumentos, consulte a documentacao do script utilizando o argumento --h."
+     echo "   Caso nao conheca os argumentos, consulte a documentacao do script no corpo do script."
      echo ""
      echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
      exit 100
