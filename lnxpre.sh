@@ -6,6 +6,40 @@
  echo "-                         Linux Pre Reqs "
  echo "- ------------------------------------------------------------------- -"
 
+ fn_distro()
+ {
+ echo -e " - Testando versao da Distro : \c"
+ if [ -f /etc/redhat-release ]
+      then       
+     	 echo "OK"
+     else
+     	 echo "NOK - Este sistema nao e baseado em Red Hat."
+       exit 100
+ fi
+ }
+
+ fn_update()
+ {
+ while true; do
+   read -p "Atualizar o sistema operacional com 'dnf update'? (Y/N): " answer
+   case "$answer" in
+      [Yy]* )
+          # Run dnf update
+          echo -e "Executando o dnf update..."
+          sudo dnf update -y
+          break
+          ;;
+      [Nn]* )
+          echo -e "Nenhuma atualizacao sera executada."
+          break
+          ;;
+      * )
+          echo "Entrada invalida. Por favor, digite Y ou N."
+          ;;
+  esac
+  done
+ }
+
  fn_rc()
  {
    if [ ${?} -eq 0 ]
@@ -105,6 +139,8 @@
  }
 
  # Execucao
+ fn_distro
+ fn_update
  fn_grub_version
  fn_grub_config
  fn_dracut_module
